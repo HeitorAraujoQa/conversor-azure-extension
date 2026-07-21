@@ -1,25 +1,20 @@
-// ==========================================================
-// Conversor de horas → decimal (Azure DevOps)
-// Fórmula: horas decimais = horas + (minutos / 60)
-// ==========================================================
+const extensionApi = globalThis.browser ?? globalThis.chrome;
 
-const inputHoras   = document.getElementById('horas');
+const inputHoras = document.getElementById('horas');
 const inputMinutos = document.getElementById('minutos');
 const btnConverter = document.getElementById('btnConverter');
-const btnCopiar    = document.getElementById('btnCopiar');
-const btnLimpar    = document.getElementById('btnLimpar');
-const boxErro      = document.getElementById('erro');
+const btnCopiar = document.getElementById('btnCopiar');
+const btnAdicionar = document.getElementById('btnAdicionar');
+const btnLimpar = document.getElementById('btnLimpar');
+const boxErro = document.getElementById('erro');
 const boxResultado = document.getElementById('resultado');
-const spanValor    = document.getElementById('valorDecimal');
-const spanCopiado  = document.getElementById('copiado');
+const spanValor = document.getElementById('valorDecimal');
+const spanCopiado = document.getElementById('copiado');
 
 let timerCopiado = null;
 
-// ----------------------------------------------------------
-// Validação: horas ≥ 0 (inteiro), minutos entre 0 e 59
-// ----------------------------------------------------------
 function validar() {
-  const horas   = inputHoras.value === ''   ? 0 : Number(inputHoras.value);
+  const horas = inputHoras.value === '' ? 0 : Number(inputHoras.value);
   const minutos = inputMinutos.value === '' ? 0 : Number(inputMinutos.value);
 
   inputHoras.classList.remove('invalid');
@@ -45,43 +40,35 @@ function validar() {
   return { ok: true, horas, minutos };
 }
 
-// ----------------------------------------------------------
-// Conversão com arredondamento para 2 casas e vírgula
-// ----------------------------------------------------------
 function converter() {
-  const v = validar();
+  const valores = validar();
 
-  if (!v.ok) {
-    boxErro.textContent = v.mensagem;
+  if (!valores.ok) {
+    boxErro.textContent = valores.mensagem;
     boxErro.classList.add('show');
     boxResultado.classList.remove('show');
-    return;
+    return false;
   }
 
   boxErro.classList.remove('show');
-
-  const decimal = v.horas + (v.minutos / 60);
+  const decimal = valores.horas + (valores.minutos / 60);
   spanValor.textContent = decimal.toFixed(2).replace('.', ',');
   boxResultado.classList.add('show');
+  return true;
 }
 
-// ----------------------------------------------------------
-// Copiar resultado para a área de transferência
-// ----------------------------------------------------------
 async function copiarResultado() {
-  if (!boxResultado.classList.contains('show')) converter();
-  if (!boxResultado.classList.contains('show')) return; // erro de validação
+  if (!boxResultado.classList.contains('show') && !converter()) return;
 
   try {
     await navigator.clipboard.writeText(spanValor.textContent);
   } catch {
-    // Fallback raro em popups de extensão
-    const tmp = document.createElement('textarea');
-    tmp.value = spanValor.textContent;
-    document.body.appendChild(tmp);
-    tmp.select();
+    const temporario = document.createElement('textarea');
+    temporario.value = spanValor.textContent;
+    document.body.appendChild(temporario);
+    temporario.select();
     document.execCommand('copy');
-    document.body.removeChild(tmp);
+    temporario.remove();
   }
 
   spanCopiado.classList.add('show');
@@ -89,9 +76,6 @@ async function copiarResultado() {
   timerCopiado = setTimeout(() => spanCopiado.classList.remove('show'), 1800);
 }
 
-// ----------------------------------------------------------
-// Limpar campos e mensagens
-// ----------------------------------------------------------
 function limpar() {
   inputHoras.value = '';
   inputMinutos.value = '';
@@ -102,21 +86,66 @@ function limpar() {
   inputHoras.focus();
 }
 
-// ----------------------------------------------------------
-// Eventos
-// ----------------------------------------------------------
+function consultarGuias(queryInfo) {
+  if (globalThis.browser) return extensionApi.tabs.query(queryInfo);
+
+  return new Promise((resolve, reject) => {
+    extensionApi.tabs.query(queryInfo, tabs => {
+      const error = extensionApi.runtime.lastError;
+      if (error) reject(new Error(error.message));
+      else resolve(tabs);
+    });
+  });
+}
+
+function enviarMensagem(tabId, message) {
+  if (globalThis.browser) return extensionApi.tabs.sendMessage(tabId, message);
+
+  return new Promise((resolve, reject) => {
+    extensionApi.tabs.sendMessage(tabId, message, response => {
+      const error = extensionApi.runtime.lastError;
+      if (error) {
+        reject(new Error('Abra um item do Azure DevOps em dev.azure.com ou visualstudio.com para preencher o campo automaticamente.'));
+      } else {
+        resolve(response);
+      }
+    });
+  });
+}
+
+async function adicionar() {
+  if (!converter()) return;
+
+  boxErro.classList.remove('show');
+
+  try {
+    const [tab] = await consultarGuias({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error('Não foi possível identificar a guia ativa.');
+
+    const response = await enviarMensagem(tab.id, {
+      type: 'PREENCHER_AZURE',
+      value: spanValor.textContent
+    });
+
+    if (!response?.success) {
+      throw new Error(response?.error || 'Não foi possível preencher o campo do Azure DevOps.');
+    }
+  } catch (error) {
+    boxErro.textContent = error?.message || 'Erro ao enviar dados para a página ativa.';
+    boxErro.classList.add('show');
+  }
+}
+
 btnConverter.addEventListener('click', converter);
 btnCopiar.addEventListener('click', copiarResultado);
+btnAdicionar.addEventListener('click', adicionar);
 btnLimpar.addEventListener('click', limpar);
-
-// Conversão automática ao digitar
 inputHoras.addEventListener('input', converter);
 inputMinutos.addEventListener('input', converter);
+[inputHoras, inputMinutos].forEach(elemento => {
+  elemento.addEventListener('keydown', evento => {
+    if (evento.key === 'Enter') converter();
+  });
+});
 
-// Enter também converte
-[inputHoras, inputMinutos].forEach(el =>
-  el.addEventListener('keydown', e => { if (e.key === 'Enter') converter(); })
-);
-
-// Foco inicial ao abrir o popup
 inputHoras.focus();

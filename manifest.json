@@ -2,14 +2,35 @@
   "manifest_version": 3,
   "name": "Conversor de Horas — Azure DevOps",
   "version": "1.0.0",
-  "description": "Converte horas e minutos para o formato decimal usado nos lançamentos de tempo do Azure DevOps.",
+  "description": "Converte horas e minutos para decimal e preenche o campo Realizado no Azure DevOps.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Conversor de horas"
+    "default_title": "Conversor de horas",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://dev.azure.com/*",
+        "*://*.visualstudio.com/*"
+      ],
+      "js": ["content-script.js"]
+    }
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "conversor-azure@example.com",
+      "strict_min_version": "109.0"
+    }
   }
 }

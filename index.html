@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Conversor de Horas — Azure DevOps</title>
+  <title>Conversor de Horas - Azure DevOps</title>
   <style>
     /* ============================================================
        Design tokens — paleta inspirada no Fluent / Azure DevOps
@@ -282,6 +282,7 @@
       <h1>Conversor de horas para o Azure DevOps</h1>
     </div>
     <p>Converta horas e minutos para o formato decimal usado nos lançamentos de tempo.</p>
+    <p>versão: 1.1</p>
   </header>
 
   <main class="card">
@@ -289,7 +290,7 @@
       <div class="field">
         <label for="horas">Horas</label>
         <input type="number" id="horas" min="0" step="1" inputmode="numeric" placeholder="0" />
-        <div class="hint">Número inteiro, sem negativos</div>
+        <div class="hint">Numero inteiro, sem negativos</div>
       </div>
       <div class="field">
         <label for="minutos">Minutos</label>
@@ -298,18 +299,19 @@
       </div>
     </div>
 
-    <!-- Mensagem de erro de validação -->
+    <!-- Mensagem de erro de validacao -->
     <div class="error-msg" id="erro" role="alert"></div>
 
     <div class="actions">
       <button type="button" class="btn-primary" id="btnConverter">Converter para horas do Azure</button>
       <button type="button" class="btn-secondary" id="btnCopiar">Copiar resultado</button>
       <button type="button" class="btn-secondary" id="btnLimpar">Limpar campos</button>
+      <button type="button" class="btn-secondary" id="btnAdicionar">Adicionar automaticamente</button>
     </div>
 
     <!-- Resultado destacado -->
     <div class="result" id="resultado" aria-live="polite">
-      <div class="result-label">Valor para lançar no Azure DevOps:</div>
+      <div class="result-label">Valor para lancar no Azure DevOps:</div>
       <div class="result-value">
         <span id="valorDecimal">0,00</span> horas
         <span class="copy-feedback" id="copiado">Copiado ✓</span>
@@ -317,9 +319,9 @@
     </div>
   </main>
 
-  <!-- Tabela de referência rápida -->
+  <!-- Tabela de referencia rapida -->
   <section class="reference">
-    <h2>Tabela de referência rápida</h2>
+    <h2>Tabela de referencia rapida</h2>
     <table>
       <thead>
         <tr><th>Minutos reais</th><th>Valor decimal</th></tr>
@@ -346,6 +348,7 @@
     const inputMinutos = document.getElementById('minutos');
     const btnConverter = document.getElementById('btnConverter');
     const btnCopiar    = document.getElementById('btnCopiar');
+    const btnAdicionar  = document.getElementById('btnAdicionar');
     const btnLimpar    = document.getElementById('btnLimpar');
     const boxErro      = document.getElementById('erro');
     const boxResultado = document.getElementById('resultado');
@@ -406,6 +409,7 @@
       const arredondado = decimal.toFixed(2);          // ex.: "1.67"
       spanValor.textContent = arredondado.replace('.', ','); // ex.: "1,67"
       boxResultado.classList.add('show');
+      return arredondado
     }
 
     // ==========================================================
@@ -454,6 +458,7 @@
     btnConverter.addEventListener('click', converter);
     btnCopiar.addEventListener('click', copiarResultado);
     btnLimpar.addEventListener('click', limpar);
+    btnAdicionar.addEventListener('click', adicionar);
 
     // Conversão automática ao alterar os valores
     inputHoras.addEventListener('input', converter);
@@ -463,6 +468,22 @@
     [inputHoras, inputMinutos].forEach(el =>
       el.addEventListener('keydown', e => { if (e.key === 'Enter') converter(); })
     );
+
+    async function adicionar() {
+      const resultado = converter();
+      if (!boxResultado.classList.contains('show')) return;
+
+      const inputAzure = document.getElementById('__bolt-Realizado-input');
+      if (!inputAzure) {
+        boxErro.textContent = 'Não foi possível encontrar o campo do Azure DevOps na página atual.';
+        boxErro.classList.add('show');
+        return;
+      }
+
+      inputAzure.value = spanValor.textContent;
+      inputAzure.dispatchEvent(new Event('input', { bubbles: true }));
+      inputAzure.focus();
+    }
   </script>
 </body>
 </html>

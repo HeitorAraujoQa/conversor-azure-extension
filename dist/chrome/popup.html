@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Conversor de Horas — Azure DevOps</title>
+  <style>
+    /* ============================================================
+       Design tokens — paleta inspirada no Fluent / Azure DevOps
+       ============================================================ */
+    :root {
+      --azure-blue: #0078D4;
+      --azure-blue-hover: #106EBE;
+      --azure-blue-active: #005A9E;
+      --bg-page: #F3F2F1;
+      --bg-card: #FFFFFF;
+      --text-primary: #201F1E;
+      --text-secondary: #605E5C;
+      --border: #D2D0CE;
+      --border-focus: #0078D4;
+      --error: #A4262C;
+      --error-bg: #FDE7E9;
+      --success: #107C10;
+      --radius: 4px;
+      --shadow-card: 0 1.6px 3.6px rgba(0,0,0,.10), 0 0.3px 0.9px rgba(0,0,0,.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Popup de extensão: largura fixa, sem viewport de página */
+    body {
+      width: 380px;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      padding: 16px;
+    }
+
+    header { margin-bottom: 14px; }
+
+    .header-bar { display: flex; align-items: center; gap: 8px; }
+
+    .logo {
+      width: 22px; height: 22px;
+      background: var(--azure-blue);
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+      flex-shrink: 0;
+    }
+
+    header h1 { font-size: 15px; font-weight: 600; }
+
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .field input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 7px 9px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color .1s ease;
+    }
+    .field input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 1px var(--border-focus) inset;
+    }
+    .field input.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 1px var(--error) inset;
+    }
+
+    .hint { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+
+    .error-msg {
+      display: none;
+      margin-top: 12px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--error);
+      background: var(--error-bg);
+      border-left: 3px solid var(--error);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .error-msg.show { display: block; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+    button {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background .1s ease;
+    }
+    button:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+
+    .btn-primary { background: var(--azure-blue); color: #fff; flex: 1 1 100%; }
+    .btn-primary:hover  { background: var(--azure-blue-hover); }
+    .btn-primary:active { background: var(--azure-blue-active); }
+
+    .btn-secondary { background: #fff; color: var(--text-primary); border-color: var(--border); flex: 1; }
+    .btn-secondary:hover { background: #F3F2F1; }
+
+    .result {
+      display: none;
+      margin-top: 14px;
+      padding: 12px;
+      border-left: 4px solid var(--azure-blue);
+      background: #EFF6FC;
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .result.show { display: block; }
+
+    .result-label { font-size: 12px; color: var(--text-secondary); }
+
+    .result-value {
+      margin-top: 3px;
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--azure-blue-active);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .copy-feedback {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--success);
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .copy-feedback.show { opacity: 1; }
+
+    /* Tabela de referência recolhível para não alongar o popup */
+    details { margin-top: 14px; }
+
+    summary {
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--azure-blue-active);
+      user-select: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin-top: 8px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+    }
+
+    th, td { padding: 6px 10px; border-bottom: 1px solid #EDEBE9; text-align: left; }
+
+    th {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:last-child td { border-bottom: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-bar">
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Conversor de horas — Azure DevOps</h1>
+    </div>
+  </header>
+
+  <main class="card">
+    <div class="fields">
+      <div class="field">
+        <label for="horas">Horas</label>
+        <input type="number" id="horas" min="0" step="1" inputmode="numeric" placeholder="0" />
+        <div class="hint">Inteiro, sem negativos</div>
+      </div>
+      <div class="field">
+        <label for="minutos">Minutos</label>
+        <input type="number" id="minutos" min="0" max="59" step="1" inputmode="numeric" placeholder="0" />
+        <div class="hint">Entre 0 e 59</div>
+      </div>
+    </div>
+
+    <div class="error-msg" id="erro" role="alert"></div>
+
+    <div class="actions">
+      <button type="button" class="btn-primary" id="btnConverter">Converter para horas do Azure</button>
+      <button type="button" class="btn-secondary" id="btnCopiar">Copiar</button>
+      <button type="button" class="btn-secondary" id="btnAdicionar">Adicionar automaticamente</button>
+      <button type="button" class="btn-secondary" id="btnLimpar">Limpar</button>
+    </div>
+
+    <div class="result" id="resultado" aria-live="polite">
+      <div class="result-label">Valor para lançar no Azure DevOps:</div>
+      <div class="result-value">
+        <span id="valorDecimal">0,00</span> horas
+        <span class="copy-feedback" id="copiado">Copiado ✓</span>
+      </div>
+    </div>
+  </main>
+
+  <details>
+    <summary>Tabela de referência rápida</summary>
+    <table>
+      <thead>
+        <tr><th>Minutos reais</th><th>Valor decimal</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>5 minutos</td><td>0,08</td></tr>
+        <tr><td>10 minutos</td><td>0,17</td></tr>
+        <tr><td>15 minutos</td><td>0,25</td></tr>
+        <tr><td>20 minutos</td><td>0,33</td></tr>
+        <tr><td>30 minutos</td><td>0,50</td></tr>
+        <tr><td>40 minutos</td><td>0,67</td></tr>
+        <tr><td>45 minutos</td><td>0,75</td></tr>
+        <tr><td>50 minutos</td><td>0,83</td></tr>
+        <tr><td>60 minutos</td><td>1,00</td></tr>
+      </tbody>
+    </table>
+  </details>
+
+  <!-- Manifest V3 proíbe script inline: todo o JS fica em popup.js -->
+  <script src="popup.js"></script>
+</body>
+</html>

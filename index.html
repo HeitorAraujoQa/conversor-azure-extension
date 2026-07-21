@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conversor de Horas — Azure DevOps</title>
+  <style>
+    /* ============================================================
+       Design tokens — paleta inspirada no Fluent / Azure DevOps
+       ============================================================ */
+    :root {
+      --azure-blue: #0078D4;        /* azul primário da Microsoft */
+      --azure-blue-hover: #106EBE;
+      --azure-blue-active: #005A9E;
+      --bg-page: #F3F2F1;           /* cinza neutro do Fluent */
+      --bg-card: #FFFFFF;
+      --text-primary: #201F1E;
+      --text-secondary: #605E5C;
+      --border: #D2D0CE;
+      --border-focus: #0078D4;
+      --error: #A4262C;
+      --error-bg: #FDE7E9;
+      --success: #107C10;
+      --success-bg: #DFF6DD;
+      --radius: 4px;
+      --shadow-card: 0 1.6px 3.6px rgba(0,0,0,.10), 0 0.3px 0.9px rgba(0,0,0,.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", "Segoe UI Web (West European)", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 48px;
+    }
+
+    /* ============================================================
+       Cabeçalho
+       ============================================================ */
+    header {
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 20px;
+    }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Losango azul remetendo ao logotipo do Azure DevOps */
+    .logo {
+      width: 28px;
+      height: 28px;
+      background: var(--azure-blue);
+      clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    header p {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ============================================================
+       Cartão principal
+       ============================================================ */
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 24px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .field input {
+      width: 100%;
+      font-family: inherit;
+      font-size: 15px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color .1s ease;
+    }
+
+    .field input:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 1px var(--border-focus) inset;
+    }
+
+    .field input.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 1px var(--error) inset;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Mensagem de erro */
+    .error-msg {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--error);
+      background: var(--error-bg);
+      border-left: 3px solid var(--error);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .error-msg.show { display: block; }
+
+    /* ============================================================
+       Botões
+       ============================================================ */
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background .1s ease;
+    }
+    button:focus-visible {
+      outline: 2px solid var(--text-primary);
+      outline-offset: 2px;
+    }
+
+    .btn-primary {
+      background: var(--azure-blue);
+      color: #fff;
+    }
+    .btn-primary:hover  { background: var(--azure-blue-hover); }
+    .btn-primary:active { background: var(--azure-blue-active); }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--text-primary);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover { background: #F3F2F1; }
+
+    /* ============================================================
+       Resultado
+       ============================================================ */
+    .result {
+      display: none;
+      margin-top: 22px;
+      padding: 16px;
+      border-left: 4px solid var(--azure-blue);
+      background: #EFF6FC; /* azul-claro do Fluent para destaques */
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+    .result.show { display: block; }
+
+    .result-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .result-value {
+      margin-top: 4px;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--azure-blue-active);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .copy-feedback {
+      display: inline-block;
+      margin-left: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--success);
+      opacity: 0;
+      transition: opacity .2s ease;
+    }
+    .copy-feedback.show { opacity: 1; }
+
+    /* ============================================================
+       Tabela de referência
+       ============================================================ */
+    .reference {
+      width: 100%;
+      max-width: 520px;
+      margin-top: 20px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      padding: 20px 24px;
+    }
+
+    .reference h2 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 7px 10px;
+      border-bottom: 1px solid #EDEBE9;
+      text-align: left;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
+    td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #F3F2F1; }
+
+    /* ============================================================
+       Responsividade
+       ============================================================ */
+    @media (max-width: 480px) {
+      body { padding: 20px 12px 36px; }
+      .card, .reference { padding: 18px 16px; }
+      .fields { grid-template-columns: 1fr; }
+      .actions button { flex: 1 1 100%; }
+      .result-value { font-size: 22px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-bar">
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Conversor de horas para o Azure DevOps</h1>
+    </div>
+    <p>Converta horas e minutos para o formato decimal usado nos lançamentos de tempo.</p>
+  </header>
+
+  <main class="card">
+    <div class="fields">
+      <div class="field">
+        <label for="horas">Horas</label>
+        <input type="number" id="horas" min="0" step="1" inputmode="numeric" placeholder="0" />
+        <div class="hint">Número inteiro, sem negativos</div>
+      </div>
+      <div class="field">
+        <label for="minutos">Minutos</label>
+        <input type="number" id="minutos" min="0" max="59" step="1" inputmode="numeric" placeholder="0" />
+        <div class="hint">Entre 0 e 59</div>
+      </div>
+    </div>
+
+    <!-- Mensagem de erro de validação -->
+    <div class="error-msg" id="erro" role="alert"></div>
+
+    <div class="actions">
+      <button type="button" class="btn-primary" id="btnConverter">Converter para horas do Azure</button>
+      <button type="button" class="btn-secondary" id="btnCopiar">Copiar resultado</button>
+      <button type="button" class="btn-secondary" id="btnLimpar">Limpar campos</button>
+    </div>
+
+    <!-- Resultado destacado -->
+    <div class="result" id="resultado" aria-live="polite">
+      <div class="result-label">Valor para lançar no Azure DevOps:</div>
+      <div class="result-value">
+        <span id="valorDecimal">0,00</span> horas
+        <span class="copy-feedback" id="copiado">Copiado ✓</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Tabela de referência rápida -->
+  <section class="reference">
+    <h2>Tabela de referência rápida</h2>
+    <table>
+      <thead>
+        <tr><th>Minutos reais</th><th>Valor decimal</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>5 minutos</td><td>0,08</td></tr>
+        <tr><td>10 minutos</td><td>0,17</td></tr>
+        <tr><td>15 minutos</td><td>0,25</td></tr>
+        <tr><td>20 minutos</td><td>0,33</td></tr>
+        <tr><td>30 minutos</td><td>0,50</td></tr>
+        <tr><td>40 minutos</td><td>0,67</td></tr>
+        <tr><td>45 minutos</td><td>0,75</td></tr>
+        <tr><td>50 minutos</td><td>0,83</td></tr>
+        <tr><td>60 minutos</td><td>1,00</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <script>
+    // ==========================================================
+    // Referências aos elementos da página
+    // ==========================================================
+    const inputHoras   = document.getElementById('horas');
+    const inputMinutos = document.getElementById('minutos');
+    const btnConverter = document.getElementById('btnConverter');
+    const btnCopiar    = document.getElementById('btnCopiar');
+    const btnLimpar    = document.getElementById('btnLimpar');
+    const boxErro      = document.getElementById('erro');
+    const boxResultado = document.getElementById('resultado');
+    const spanValor    = document.getElementById('valorDecimal');
+    const spanCopiado  = document.getElementById('copiado');
+
+    let timerCopiado = null;
+
+    // ==========================================================
+    // Validação dos campos
+    // Retorna { ok, horas, minutos, mensagem }
+    // ==========================================================
+    function validar() {
+      // Campos vazios são tratados como zero
+      const horas   = inputHoras.value === ''   ? 0 : Number(inputHoras.value);
+      const minutos = inputMinutos.value === '' ? 0 : Number(inputMinutos.value);
+
+      inputHoras.classList.remove('invalid');
+      inputMinutos.classList.remove('invalid');
+
+      if (!Number.isFinite(horas) || !Number.isInteger(horas)) {
+        inputHoras.classList.add('invalid');
+        return { ok: false, mensagem: 'Informe as horas como um número inteiro.' };
+      }
+      if (horas < 0) {
+        inputHoras.classList.add('invalid');
+        return { ok: false, mensagem: 'As horas não podem ser negativas.' };
+      }
+      if (!Number.isFinite(minutos) || !Number.isInteger(minutos)) {
+        inputMinutos.classList.add('invalid');
+        return { ok: false, mensagem: 'Informe os minutos como um número inteiro.' };
+      }
+      if (minutos < 0 || minutos > 59) {
+        inputMinutos.classList.add('invalid');
+        return { ok: false, mensagem: 'Os minutos devem estar entre 0 e 59.' };
+      }
+
+      return { ok: true, horas, minutos };
+    }
+
+    // ==========================================================
+    // Conversão: horas decimais = horas + (minutos / 60)
+    // Arredondado para 2 casas e exibido com vírgula
+    // ==========================================================
+    function converter() {
+      const v = validar();
+
+      if (!v.ok) {
+        boxErro.textContent = v.mensagem;
+        boxErro.classList.add('show');
+        boxResultado.classList.remove('show');
+        return;
+      }
+
+      boxErro.classList.remove('show');
+
+      const decimal = v.horas + (v.minutos / 60);
+      const arredondado = decimal.toFixed(2);          // ex.: "1.67"
+      spanValor.textContent = arredondado.replace('.', ','); // ex.: "1,67"
+      boxResultado.classList.add('show');
+    }
+
+    // ==========================================================
+    // Copiar o resultado para a área de transferência
+    // ==========================================================
+    async function copiarResultado() {
+      // Se ainda não houver resultado visível, converte primeiro
+      if (!boxResultado.classList.contains('show')) converter();
+      if (!boxResultado.classList.contains('show')) return; // erro de validação
+
+      const texto = spanValor.textContent;
+      try {
+        await navigator.clipboard.writeText(texto);
+      } catch {
+        // Fallback para navegadores sem Clipboard API (ex.: file:// antigo)
+        const tmp = document.createElement('textarea');
+        tmp.value = texto;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+      }
+
+      // Feedback visual "Copiado ✓"
+      spanCopiado.classList.add('show');
+      clearTimeout(timerCopiado);
+      timerCopiado = setTimeout(() => spanCopiado.classList.remove('show'), 1800);
+    }
+
+    // ==========================================================
+    // Limpar todos os campos e mensagens
+    // ==========================================================
+    function limpar() {
+      inputHoras.value = '';
+      inputMinutos.value = '';
+      inputHoras.classList.remove('invalid');
+      inputMinutos.classList.remove('invalid');
+      boxErro.classList.remove('show');
+      boxResultado.classList.remove('show');
+      inputHoras.focus();
+    }
+
+    // ==========================================================
+    // Eventos
+    // ==========================================================
+    btnConverter.addEventListener('click', converter);
+    btnCopiar.addEventListener('click', copiarResultado);
+    btnLimpar.addEventListener('click', limpar);
+
+    // Conversão automática ao alterar os valores
+    inputHoras.addEventListener('input', converter);
+    inputMinutos.addEventListener('input', converter);
+
+    // Enter também converte
+    [inputHoras, inputMinutos].forEach(el =>
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') converter(); })
+    );
+  </script>
+</body>
+</html>

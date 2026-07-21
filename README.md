@@ -6,6 +6,10 @@ usado nos lançamentos de tempo do Azure DevOps.
 > Fórmula: `horas decimais = horas + (minutos / 60)`, arredondado para 2 casas.
 > Exemplo: **1h40 = 1,67** (nunca 1,40).
 
+<p align="center">
+  <img src="docs/popup.png" alt="Popup da extensão Conversor de horas — Azure DevOps" width="360">
+</p>
+
 ---
 
 ## Instalação no Google Chrome
@@ -61,10 +65,24 @@ processo na próxima vez que precisar.
 1. Clique no ícone da extensão.
 2. Digite as **horas** e os **minutos** trabalhados.
 3. O valor decimal aparece automaticamente (ex.: `1` hora e `40` min → `1,67`).
-4. Use o botão de **copiar** para levar o resultado ao Azure DevOps.
+4. Leve o resultado ao Azure DevOps de uma destas formas:
+   - **Copiar** — copia o valor decimal para a área de transferência e você cola
+     manualmente no campo desejado.
+   - **Adicionar automaticamente** — veja abaixo.
+   - **Limpar** — zera os campos.
 
 Há também uma **tabela de referência** recolhível (5min = 0,08 … 60min = 1,00)
 dentro do popup.
+
+### Adicionar automaticamente ao Azure
+
+Se você estiver com o **item do Azure DevOps aberto** (aquele em que a hora deve
+ser lançada):
+
+1. Preencha os campos de **Horas** e **Minutos** no popup.
+2. Clique em **Adicionar automaticamente**.
+3. A extensão insere o valor decimal diretamente no campo **Horas Realizadas
+   (Completed Work)** do item — sem precisar copiar e colar.
 
 ---
 

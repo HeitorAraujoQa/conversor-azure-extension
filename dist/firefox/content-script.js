@@ -1,22 +1,109 @@
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 
 extensionApi.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== 'PREENCHER_AZURE') return false;
+  if (message?.type === 'PREENCHER_AZURE') {
+    preencherRealizado(message.value, sendResponse);
+    return false;
+  }
 
+  if (message?.type === 'FECHAR_TASK') {
+    try {
+      fecharTask(sendResponse);
+    } catch (error) {
+      sendResponse({
+        success: false,
+        error: `Erro ao calcular o tempo da task: ${error?.message || 'erro desconhecido'}`
+      });
+    }
+    return false;
+  }
+
+  return false;
+});
+
+function preencherRealizado(value, sendResponse) {
   const inputAzure = document.querySelector('#__bolt-Realizado-input');
   if (!inputAzure) {
     sendResponse({ success: false, error: 'Campo Realizado do Azure DevOps não encontrado.' });
-    return false;
+    return;
   }
 
   // O setter nativo permite que controles gerenciados pelo React percebam a mudança.
   const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-  if (valueSetter) valueSetter.call(inputAzure, message.value);
-  else inputAzure.value = message.value;
+  if (valueSetter) valueSetter.call(inputAzure, value);
+  else inputAzure.value = value;
 
   inputAzure.dispatchEvent(new Event('input', { bubbles: true }));
   inputAzure.dispatchEvent(new Event('change', { bubbles: true }));
   inputAzure.focus();
   sendResponse({ success: true });
-  return false;
-});
+}
+
+function encontrarCampoInicio() {
+  const campoPorId = document.querySelector('#__bolt-textfield-input-8');
+  if (campoPorId) return campoPorId;
+
+  const campoPorNome = document.querySelector([
+    'input[aria-label*="data de início" i]',
+    'input[aria-label*="data de inicio" i]',
+    'input[aria-label*="start date" i]'
+  ].join(','));
+  if (campoPorNome) return campoPorNome;
+
+  const label = Array.from(document.querySelectorAll('label')).find(elemento => {
+    const texto = elemento.textContent?.trim().toLocaleLowerCase();
+    return texto?.includes('data de início') ||
+      texto?.includes('data de inicio') ||
+      texto?.includes('start date');
+  });
+
+  return label?.htmlFor ? document.getElementById(label.htmlFor) : null;
+}
+
+function converterDataInicio(value) {
+  const texto = value?.trim();
+  if (!texto) return NaN;
+
+  // Datas no formato brasileiro não são interpretadas de forma consistente pelo Date.parse.
+  const dataBrasileira = texto.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+  );
+  if (dataBrasileira) {
+    const [, dia, mes, ano, hora = '0', minuto = '0', segundo = '0'] = dataBrasileira;
+    const data = new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(minuto), Number(segundo));
+
+    if (
+      data.getFullYear() === Number(ano) &&
+      data.getMonth() === Number(mes) - 1 &&
+      data.getDate() === Number(dia)
+    ) {
+      return data.getTime();
+    }
+    return NaN;
+  }
+
+  return Date.parse(texto);
+}
+
+function fecharTask(sendResponse) {
+  const campoInicio = encontrarCampoInicio();
+  if (!campoInicio) {
+    sendResponse({ success: false, error: 'Campo de data de início da task não encontrado.' });
+    return;
+  }
+
+  const dataInicio = converterDataInicio(campoInicio.value);
+  const dataFim = Date.now();
+  if (!Number.isFinite(dataInicio) || dataInicio > dataFim) {
+    sendResponse({ success: false, error: 'A data de início da task é inválida.' });
+    return;
+  }
+
+  const resultado = ((dataFim - dataInicio) / 3_600_000)
+    .toFixed(2)
+    .replace('.', ',');
+
+  preencherRealizado(resultado, response => {
+    sendResponse(response.success ? { success: true, value: resultado } : response);
+  });
+}

@@ -99,19 +99,57 @@ function consultarGuias(queryInfo) {
   });
 }
 
-function enviarMensagem(tabId, message) {
+function enviarMensagemUmaVez(tabId, message) {
   if (globalThis.browser) return extensionApi.tabs.sendMessage(tabId, message);
 
   return new Promise((resolve, reject) => {
     extensionApi.tabs.sendMessage(tabId, message, response => {
       const error = extensionApi.runtime.lastError;
-      if (error) {
-        reject(new Error('Abra um item do Azure DevOps em dev.azure.com ou visualstudio.com para preencher o campo automaticamente.'));
-      } else {
-        resolve(response);
-      }
+      if (error) reject(new Error(error.message));
+      else resolve(response);
     });
   });
+}
+
+function ehGuiaAzureDevOps(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname === 'dev.azure.com' || hostname.endsWith('.visualstudio.com');
+  } catch {
+    return false;
+  }
+}
+
+function executarContentScript(tabId) {
+  const details = { target: { tabId }, files: ['content-script.js'] };
+  if (globalThis.browser) return extensionApi.scripting.executeScript(details);
+
+  return new Promise((resolve, reject) => {
+    extensionApi.scripting.executeScript(details, result => {
+      const error = extensionApi.runtime.lastError;
+      if (error) reject(new Error(error.message));
+      else resolve(result);
+    });
+  });
+}
+
+function receptorNaoExiste(error) {
+  return /receiving end does not exist|could not establish connection/i.test(error?.message || '');
+}
+
+async function enviarMensagem(tab, message) {
+  if (!tab?.id) throw new Error('Não foi possível identificar a guia ativa.');
+  if (!ehGuiaAzureDevOps(tab.url)) {
+    throw new Error('Abra um item do Azure DevOps em dev.azure.com ou visualstudio.com para usar esta ação.');
+  }
+
+  try {
+    return await enviarMensagemUmaVez(tab.id, message);
+  } catch (error) {
+    if (!receptorNaoExiste(error)) throw error;
+    await executarContentScript(tab.id);
+    return enviarMensagemUmaVez(tab.id, message);
+  }
 }
 
 async function adicionar() {
@@ -123,7 +161,7 @@ async function adicionar() {
     const [tab] = await consultarGuias({ active: true, currentWindow: true });
     if (!tab?.id) throw new Error('Não foi possível identificar a guia ativa.');
 
-    const response = await enviarMensagem(tab.id, {
+    const response = await enviarMensagem(tab, {
       type: 'PREENCHER_AZURE',
       value: spanValor.textContent
     });
@@ -159,7 +197,7 @@ async function FecharTask() {
     const [tab] = await consultarGuias({ active: true, currentWindow: true });
     if (!tab?.id) throw new Error('Não foi possível identificar a guia ativa.');
 
-    const response = await enviarMensagem(tab.id, { type: 'FECHAR_TASK' });
+    const response = await enviarMensagem(tab, { type: 'FECHAR_TASK' });
     if (!response) {
       throw new Error('A página do Azure não respondeu. Atualize a aba do Azure e tente novamente.');
     }

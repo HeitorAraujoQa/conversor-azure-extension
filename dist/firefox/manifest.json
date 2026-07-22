@@ -33,8 +33,13 @@
               },
     "browser_specific_settings":  {
                                       "gecko":  {
-                                                    "id":  "conversor-azure@example.com",
-                                                    "strict_min_version":  "109.0"
+                                                    "id":  "{7aad9c9c-26df-421f-a718-a8be44c81b17}",
+                                                    "strict_min_version":  "109.0",
+                                                    "data_collection_permissions":  {
+                                                                                         "required":  [
+                                                                                                          "none"
+                                                                                                      ]
+                                                                                     }
                                                 }
                                   }
 }

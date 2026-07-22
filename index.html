@@ -304,6 +304,7 @@
 
     <div class="actions">
       <button type="button" class="btn-primary" id="btnConverter">Converter para horas do Azure</button>
+      <button type="button" class="btn-primary" id="btnFecharTask">Fechar task</button>
       <button type="button" class="btn-secondary" id="btnCopiar">Copiar resultado</button>
       <button type="button" class="btn-secondary" id="btnLimpar">Limpar campos</button>
       <button type="button" class="btn-secondary" id="btnAdicionar">Adicionar automaticamente</button>
@@ -347,6 +348,7 @@
     const inputHoras   = document.getElementById('horas');
     const inputMinutos = document.getElementById('minutos');
     const btnConverter = document.getElementById('btnConverter');
+    const btnFecharTask = document.getElementById('btnFecharTask');
     const btnCopiar    = document.getElementById('btnCopiar');
     const btnAdicionar  = document.getElementById('btnAdicionar');
     const btnLimpar    = document.getElementById('btnLimpar');
@@ -456,6 +458,7 @@
     // Eventos
     // ==========================================================
     btnConverter.addEventListener('click', converter);
+    btnFecharTask.addEventListener('click', FecharTask);
     btnCopiar.addEventListener('click', copiarResultado);
     btnLimpar.addEventListener('click', limpar);
     btnAdicionar.addEventListener('click', adicionar);
@@ -483,6 +486,48 @@
       inputAzure.value = spanValor.textContent;
       inputAzure.dispatchEvent(new Event('input', { bubbles: true }));
       inputAzure.focus();
+    }
+
+
+    function FecharTask() {
+      const inputAzure = document.getElementById('__bolt-Realizado-input');
+      if (!inputAzure) {
+        boxErro.textContent = 'Não foi possível encontrar o campo Realizado do Azure DevOps na página atual.';
+        boxErro.classList.add('show');
+        return;
+      }
+
+      const timeInicio = document.getElementById('__bolt-textfield-input-8').value;
+      if (!timeInicio) {
+        boxErro.textContent = 'Não foi possível encontrar a data de início da task.';
+        boxErro.classList.add('show');
+        return;
+      }
+
+      const dataInicio = Date.parse(timeInicio.dateTime);
+      const dataFim = Date.now();
+      if (!Number.isFinite(dataInicio) || dataInicio > dataFim) {
+        boxErro.textContent = 'A data de início da task é inválida.';
+        boxErro.classList.add('show');
+        return;
+      }
+
+      const resultado = ((dataFim - dataInicio) / 3_600_000)
+        .toFixed(2)
+        .replace('.', ',');
+
+      // O setter nativo permite que controles gerenciados pelo React percebam a mudança.
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      if (valueSetter) valueSetter.call(inputAzure, resultado);
+      else inputAzure.value = resultado;
+
+      inputAzure.dispatchEvent(new Event('input', { bubbles: true }));
+      inputAzure.dispatchEvent(new Event('change', { bubbles: true }));
+      inputAzure.focus();
+
+      spanValor.textContent = resultado;
+      boxErro.classList.remove('show');
+      boxResultado.classList.add('show');
     }
   </script>
 </body>

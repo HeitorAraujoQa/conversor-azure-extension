@@ -3,6 +3,7 @@ const extensionApi = globalThis.browser ?? globalThis.chrome;
 const inputHoras = document.getElementById('horas');
 const inputMinutos = document.getElementById('minutos');
 const btnConverter = document.getElementById('btnConverter');
+const btnFecharTask = document.getElementById('btnFecharTask');
 const btnCopiar = document.getElementById('btnCopiar');
 const btnAdicionar = document.getElementById('btnAdicionar');
 const btnLimpar = document.getElementById('btnLimpar');
@@ -137,6 +138,7 @@ async function adicionar() {
 }
 
 btnConverter.addEventListener('click', converter);
+btnFecharTask.addEventListener('click', FecharTask);
 btnCopiar.addEventListener('click', copiarResultado);
 btnAdicionar.addEventListener('click', adicionar);
 btnLimpar.addEventListener('click', limpar);
@@ -149,3 +151,26 @@ inputMinutos.addEventListener('input', converter);
 });
 
 inputHoras.focus();
+
+async function FecharTask() {
+  boxErro.classList.remove('show');
+
+  try {
+    const [tab] = await consultarGuias({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error('Não foi possível identificar a guia ativa.');
+
+    const response = await enviarMensagem(tab.id, { type: 'FECHAR_TASK' });
+    if (!response) {
+      throw new Error('A página do Azure não respondeu. Atualize a aba do Azure e tente novamente.');
+    }
+    if (!response?.success) {
+      throw new Error(response.error || 'Não foi possível calcular o tempo da task.');
+    }
+
+    spanValor.textContent = response.value;
+    boxResultado.classList.add('show');
+  } catch (error) {
+    boxErro.textContent = error?.message || 'Erro ao acessar a página do Azure DevOps.';
+    boxErro.classList.add('show');
+  }
+}

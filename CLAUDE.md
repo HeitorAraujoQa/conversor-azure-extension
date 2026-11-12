@@ -16,7 +16,7 @@ no popup (escolha salva em `localStorage`):
 - `manifest.json` — Manifest V3, só `activeTab`; content scripts para Azure e para `*.service-now.com` (`all_frames`)
 - `popup.html` — UI completa com CSS inline no `<style>`; largura fixa de 380px (popups não têm viewport de página)
 - `popup.js` — toda a lógica do popup; config por sistema em `SISTEMAS`; JS externo é obrigatório (MV3 proíbe script inline por CSP)
-- `content-script.js` — Azure: preenche "Realizado" (`#__bolt-Realizado-input`) e "Fechar task"
+- `content-script.js` — Azure: preenche "Realizado" (`input[id^="__bolt-Realizado-input"]`, o último no DOM = work item da frente) e "Fechar task"
 - `content-script-sn.js` — ServiceNow (Tarefa de Scrum `rm_scrum_task`, formulário classic no iframe `gsft_main`): preenche "Duração real" (`ni.rm_scrum_task.work_durationdur_{day,hour,min,sec}` + hidden `rm_scrum_task.work_duration`); "Fechar task" usa `rm_scrum_task.work_start` (fallback `start_date`), formato `dd-MM-yyyy HH:mm:ss`. Só o frame que tem o campo responde à mensagem
 - `dist/chrome` e `dist/firefox` — cópias manuais para empacotar; o manifest do Chrome não tem `browser_specific_settings`
 - `icons/` — losango azul #0078D4 em 16/48/128px

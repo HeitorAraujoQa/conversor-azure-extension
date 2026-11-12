@@ -36,9 +36,10 @@
     });
   }
 
-  // Converte "HH:MM:SS" nos textos do widget e do hidden.
+  // Converte "HH:MM:SS" nos textos do widget e do hidden; valor vazio limpa o campo.
   function textosDuracao(valor) {
     const texto = valor?.trim() ?? '';
+    if (!texto) return { day: '', hour: '', min: '', sec: '', oculto: '' };
 
     const partes = /^(\d+):([0-5]\d):([0-5]\d)$/.exec(texto);
     if (!partes) return null;

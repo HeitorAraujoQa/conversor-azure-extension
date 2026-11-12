@@ -73,7 +73,9 @@ processo na próxima vez que precisar.
    - **Copiar** — copia o valor decimal para a área de transferência e você cola
      manualmente no campo desejado.
    - **Adicionar automaticamente** — veja abaixo.
-   - **Limpar** — zera os campos.
+   - **Limpar** — zera os campos do popup e também apaga o campo de tempo da
+     task aberta (Realizado no Azure / Duração real no ServiceNow). Fora de uma
+     task, limpa só o popup.
 
 Há também uma **tabela de referência** recolhível (5min = 0,08 … 60min = 1,00)
 dentro do popup.

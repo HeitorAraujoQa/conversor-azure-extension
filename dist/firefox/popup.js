@@ -123,6 +123,18 @@ function limpar() {
   boxErro.classList.remove('show');
   boxResultado.classList.remove('show');
   inputHoras.focus();
+  limparCampoDaPagina();
+}
+
+// Limpa também o campo de tempo da task aberta (valor vazio no mesmo fluxo de
+// "Adicionar"). Fora de uma página do sistema, só o popup é limpo, sem erro.
+async function limparCampoDaPagina() {
+  try {
+    const response = await enviarParaGuiaAtiva({ type: sistema.mensagemPreencher, value: '' });
+    if (response && !response.success) mostrarErro(response.error || sistema.erroPreencher);
+  } catch {
+    // Aba ativa não é do sistema selecionado: nada a limpar na página.
+  }
 }
 
 function consultarGuias(queryInfo) {

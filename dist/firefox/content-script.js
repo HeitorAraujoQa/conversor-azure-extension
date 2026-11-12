@@ -32,7 +32,9 @@ function ultimo(raiz, seletor) {
 
 function preencherRealizado(value, sendResponse, inputAzure = ultimo(document, SELETOR_REALIZADO)) {
   if (!inputAzure) {
-    sendResponse({ success: false, error: 'Campo Realizado do Azure DevOps não encontrado.' });
+    // Limpar (valor vazio) fora de um work item não tem o que apagar: não é erro.
+    if (value === '') sendResponse({ success: true });
+    else sendResponse({ success: false, error: 'Campo Realizado do Azure DevOps não encontrado.' });
     return;
   }
 
